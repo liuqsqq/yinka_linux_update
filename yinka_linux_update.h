@@ -16,7 +16,7 @@
 
 #define CURL_TIMEOUT (1)
 
-#define LINUX_UPDATE_INTERVAL   (60 * 10)
+#define LINUX_UPDATE_INTERVAL   (60 * 2)
 #define MAX_RAND_SECOND         (60)
 
 #define YINKA_LINUX_UPDATE_PORT (12333)

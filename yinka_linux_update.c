@@ -554,21 +554,31 @@ int  yinka_linux_update_init()
     g_yinka_linux_update_sock = -1;
     log_stream = stderr;
     yinka_linux_update_server_init();
+
 }
 
 int  yinka_linux_update_reset()
 {
+    char tmp_file_path[COMMON_STR_LEN] = {0};
+
     int ret = 0;
     memset(&update_str_info, 0, sizeof(update_str_info));
     memset(&update_packages_info, 0, sizeof(update_packages_info));
-    if (access(DOWNLOAD_ROOT_PATH, F_OK) == -1){
-        ret = mkdir(DOWNLOAD_ROOT_PATH, S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
-        if (ret != 0 ){
-            fprintf(log_stream, "create updatefiles path failed, exit\n");
-            return -1;
-        }
-        fprintf(log_stream, "/tmp/updatefiles path is not exist, create it\n");
-    }    
+    if (access(DOWNLOAD_ROOT_PATH, F_OK) != -1){
+        printf("update start, force to delete /tmp/updatefiles/\n");
+        memset(tmp_file_path, 0 ,sizeof(tmp_file_path));
+        /* force to delete /tmp/updatefiles/ */
+        strcat(tmp_file_path, "rm -rf ");
+        strcat(tmp_file_path, DOWNLOAD_ROOT_PATH);
+        system(tmp_file_path);
+
+    } 
+    ret = mkdir(DOWNLOAD_ROOT_PATH, S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
+    if (ret != 0 ){
+        fprintf(log_stream, "create updatefiles path failed, exit\n");
+        return -1;
+    }
+    fprintf(log_stream, "/tmp/updatefiles path is not exist, create it\n");
     return 0;  
 }
 
@@ -641,6 +651,7 @@ int process_update(char* machine_id,  int force_update_flag)
                     printf("tar ok, start to parse update.xml\n");
                     ret = parse_update_xml(tmp_file_path);
                     if (ret != -1){
+                        memset(tmp_file_path, 0 ,sizeof(tmp_file_path));
                         printf("parse ok, start to execute coresponding cmdline\n");
                         for (int i = 0; i < UPDATE_MAX; i++)
                         {
@@ -657,21 +668,31 @@ int process_update(char* machine_id,  int force_update_flag)
                             if (!strcmp("true", update_packages_info[i].update_state))
                             {
                                 local_version_get(i, version);
+                                fprintf(stderr, "version %s\n", version);                                
                                 if ((force_update != 1) && (!strcmp(version, update_packages_info[i].version)))
                                     continue;
+                                
+                                strcat(tmp_file_path, "echo \"cqutprint\" | sudo -S ");
+                                strcat(tmp_file_path, update_packages_info[i].cmdline);
+                                fprintf(stderr, "start to execute %s\n", tmp_file_path);
+                                system(tmp_file_path);
+                                memset(tmp_file_path, 0 ,sizeof(tmp_file_path));
+                                #if 0
                                 fprintf(stderr, "start to execute %s\n", update_packages_info[i].cmdline);
                                 system(update_packages_info[i].cmdline);
+                                #endif
                             }
                         }
                         
                     }
                     printf("update compete, force to delete /tmp/updatefiles/\n");
                     memset(tmp_file_path, 0 ,sizeof(tmp_file_path));
+                    #if 0
                     /* force to delete /tmp/updatefiles/ */
                     strcat(tmp_file_path, "rm -rf ");
                     strcat(tmp_file_path, DOWNLOAD_ROOT_PATH);
                     system(tmp_file_path);
-                    
+                    #endif
                     update_result.resultCode = UPDATE_CODE_SUCCESS;
                     strcpy(update_result.resultDescription, "update compete successful");
                     strcpy(update_result.clientVersion, update_str_info.version);
